@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>WAT WASM</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4em;
+  text-align: center;
+}
+
+body > * {
+  margin-bottom: 1em;
+}
+
+.example > span {
+  display: flex;
+  justify-content: center;
+}
+
+.example > span > *:not(:last-of-type) {
+  margin-right: 4px;
+}
+
+    </style>
+  </head>
+  <body>
+    <h3>Examples</h3>
+    <div class="example">
+      <h4>export "add"</h4>
+      <span>
+        <div id="add__input">613 + 534</div>
+        <div> = </div>
+        <div id="add__result"></div>
+      </span>
+    </div>
+    <div class="example">
+      <h4>export "add_folded"</h4>
+      <span>
+        <div>613 + 534</div>
+        <div> = </div>
+        <div id="add__result--folded"></div>
+      </span>
+    </div>
+    <div class="example">
+      <h4>export "add2/add3"</h4>
+      <span>
+        <div id="add23__input">613</div>
+        <div> + 2/3 = </div>
+        <div id="add23__result--2"></div>
+        <div id="add23__result--3"></div>
+      </span>
+    </div>
+    <div class="example">
+      <h4>export "add_memory"</h4>
+      <span>
+        <div id="addmem__input">613</div>
+        <div> + 2 = </div>
+        <div id="addmem__result--2"></div>
+        <div> / </div>
+        <div id="addmem__result--3"></div>
+      </span>
+    </div>
+    <div class="example">
+      <h4>export "fizzbuzz"</h4>
+      <span>
+        <div id="fizzbuzz__input">125</div>
+        <div id="fizzbuzz__output"></div>
+      </span>
+    </div>
+  </body>
+  <script>
+    async function run() {
+      const importObject = undefined;
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('add.wasm'), importObject)
+      const { add, add_folded } = instance.exports;
+
+      const input = document.getElementById("add__input").textContent.split("+").map(x => new Number(x.trim()))
+
+      document.getElementById("add__result").textContent = add(input[0], input[1]);
+      document.getElementById("add__result--folded").textContent = add_folded(input[0], input[1]);
+    }
+    run();
+
+    async function run2() {
+      const importObject = undefined;
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('contrived.wasm'), importObject)
+      const { add2, add3 } = instance.exports;
+
+      const input = document.getElementById("add23__input").textContent.split("+").map(x => new Number(x.trim()))
+
+      document.getElementById("add23__result--2").textContent = add2(input[0]);
+      document.getElementById("add23__result--3").textContent = add3(input[0]);
+    }
+    run2();
+
+    async function run3() {
+      const importObject = { funcs: { log: () => console.log("This is a imported function") }};
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('funcimport.wasm'), importObject)
+      const { doLog } = instance.exports;
+
+      doLog();
+    }
+    run3();
+
+    async function run4() {
+      const importObject = undefined;
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('memory.wasm'), importObject)
+      const { add_memory } = instance.exports;
+      const mem = new Int32Array(instance.exports.memory.buffer);
+      const input = new Number(document.getElementById("addmem__input").textContent);
+      mem[0] = input;
+      add_memory();
+      console.log(mem[0]);
+      console.log(mem[1]);
+      document.getElementById("addmem__result--3").textContent = mem[1];
+    }
+    run4();
+
+    async function runFizzbuzz() {
+      // Helpers and stuff
+      const flagaddr = 1 << 31;
+      const flagend = 1 << 30;
+
+      const isFlag = (flag) => (num) => {
+        return (num & flag) === flag;
+      }
+
+      const isAddr = isFlag(flagaddr);
+      const isEnd = isFlag(flagend);
+
+      const asNumber = (num) => {
+        if (isAddr(num)) {
+          return num ^ flagaddr;
+        }
+
+        return num;
+      }
+
+      // reads null delimited string starting at num
+      const readStrAtAddr = (num, mem) => {
+        let str = "";
+        let localaddr = asNumber(num) / 4;
+        for (let i = localaddr; i < mem.length; i++) {
+          const ch = String.fromCharCode(mem[i]);
+          if (ch === "\0") {
+            break;
+          }
+
+          str += ch;
+        }
+
+        return str;
+      }
+
+      // writes string to memory from pos
+      const writeStringToMemory = (mem, pos, str) => {
+        const split = str.split("")
+        for (let i = 0; i < str.length; i++) {
+          mem[pos + i] = split[i].charCodeAt(0)
+        }
+      }
+
+      const outputEl = document.getElementById("fizzbuzz__output");
+
+      // WASM Start.
+      const importObject = { funcs: { markAddress } };
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('fizzbuzz.wasm'), importObject)
+      const { fizzbuzz } = instance.exports;
+      const mem = new Int32Array(instance.exports.memory.buffer);
+      const input = new Number(document.getElementById("fizzbuzz__input").textContent);
+
+      const buff = []
+      function markAddress(n) {
+        buff.push(n)
+        if (buff.length >= 2) {
+          const [start, end] = buff.splice(0, 2)
+          let str = "";
+          for (let i = start / 4; i < end / 4; i++) {
+            if (isAddr(mem[i])) {
+              str += readStrAtAddr(mem[i], mem);
+            } else {
+              str = String(asNumber(mem[i]));
+            }
+          }
+
+          const node = document.createElement("div");
+          node.textContent = str;
+          outputEl.appendChild(node);
+        }
+      }
+
+      // fill memory with fizz/buzz data
+      const fizz = "fizz\0";
+      const buzz = "buzz\0";
+      writeStringToMemory(mem, 0, fizz)
+      writeStringToMemory(mem, fizz.length, buzz)
+
+      // because Int32Array single item = 32bits = 4bytes
+      fizzbuzz(0, fizz.length * 4, (fizz.length + buzz.length) * 4, input);
+
+      // just read memory to verify
+      let str = "";
+      for (let i = fizz.length + buzz.length; i < mem.length; i++) {
+        if (mem[i] == -1) {
+          console.log("found -1 at", i)
+          break;
+        }
+
+        if (isAddr(mem[i])) {
+          str += readStrAtAddr(mem[i], mem);
+        } else if (isEnd(mem[i])) {
+          console.log(str)
+          str = ""
+        } else {
+          str = String(asNumber(mem[i]));
+        }
+      }
+
+    }
+    runFizzbuzz();
+  </script>
+</html>
