@@ -74,7 +74,7 @@ body > * {
     <div class="example">
       <h4>export "fizzbuzz"</h4>
       <span>
-        <div id="fizzbuzz__input">125</div>
+        <div id="fizzbuzz__input">100</div>
         <div id="fizzbuzz__output"></div>
       </span>
     </div>
@@ -213,21 +213,53 @@ body > * {
       let str = "";
       for (let i = fizz.length + buzz.length; i < mem.length; i++) {
         if (mem[i] == -1) {
-          console.log("found -1 at", i)
+          console.log("runFizzbuzz:", "found -1 at", i)
           break;
         }
 
         if (isAddr(mem[i])) {
           str += readStrAtAddr(mem[i], mem);
         } else if (isEnd(mem[i])) {
-          console.log(str)
+          console.log("runFizzbuzz:", str)
           str = ""
         } else {
           str = String(asNumber(mem[i]));
         }
       }
-
     }
     runFizzbuzz();
+
+    // Doesn't provide memory address, but WASM just populates output completely.
+    // Currently WASM uses store8 which wraps i32 to 1 byte, which lets easily differentiate between
+    // number and string part, but due to that it is limited that range input has to fit in 8 bytes.
+    async function runFizzbuzzDirect() {
+      // WASM Start.
+      const importObject = { funcs: { markAddress } };
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('fizzbuzz_direct.wasm'), importObject)
+      const { fizzbuzz } = instance.exports;
+      const mem = new Uint8Array(instance.exports.memory.buffer);
+      const input = new Number(document.getElementById("fizzbuzz__input").textContent);
+
+      const decoder = new TextDecoder('utf8');
+      const buff = []
+      function markAddress(n) {
+        buff.push(n)
+        if (buff.length >= 2) {
+          const [start, end] = buff.splice(0, 2)
+          const len = end - start;
+          if (len === 1) {
+            // read as number
+            console.log("runFizzbuzzDirect:", mem[start])
+          } else {
+            // if longer => as string
+            const slice = mem.slice(start, end);
+            console.log("runFizzbuzzDirect:", decoder.decode(slice))
+          }
+        }
+      }
+
+      fizzbuzz(input);
+    }
+    runFizzbuzzDirect();
   </script>
 </html>

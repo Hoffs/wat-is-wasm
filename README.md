@@ -11,6 +11,14 @@ FizzBuzz implementation is done entirely by just by reading said article and [WA
 
 Compiled WAT/WAST is already included in the repository, but to self compile [WebAssembly Binary Toolkit](https://github.com/WebAssembly/wabt) can be used.
 
+```sh
+wat2wasm fizzbuzz.wast
+
+# for fizzbuzz_direct, which uses bulk memory op, needs special flag
+
+wat2wasm --enable-bulk-memory fizzbuzz.wast
+```
+
 Examples themselves are loaded in `index.html`, so to view the examples just serve the current directory using your favorite method, e.g. using node:
 
 ```

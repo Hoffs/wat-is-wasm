@@ -8,42 +8,29 @@
   ;; that is growable to up to 100 pages.
   (memory $mem 1 100)
 
+  ;; allows to cheat a bit and prefill memory with string data
+  (data (i32.const 0) "fizz")
+  (data (i32.const 4) "buzz")
+
   ;; Export that memory
   (export "memory" (memory $mem))
 
-  ;; FizzBuzz
-  (global $flagaddr (mut i32) (i32.const 0))
 
-  ;; Adds flag to input number
-  (func $addflagaddr (param $in i32) (result i32)
-    local.get $in
-    global.get $flagaddr
-    i32.or
-  )
-
-  ;; todo, import function that prints word
   ;; Input is:
-  ;; - i32 for memory location of fizz
-  ;; - i32 for memory location of buzz
   ;; - i32 for memory location of output
   ;; - i32 for number until which to run fizzbuzz
   (func $fizzbuzz
-    (param $fizzloc i32)
-    (param $buzzloc i32)
-    (param $outloc i32)
     (param $range i32) (result)
 
+    (local $outloc i32)
     (local $iter i32)
     (local $temp i32)
-
-    ;; because this isnt actually constant expr, make it mutable global and populate it
-    ;; flag for whether i32 is a address
-    (global.set $flagaddr (i32.shl (i32.const 1) (i32.const 31)))
 
     ;; block surrounds loop because we need a place to jump to,
     ;; if we jump to 0 - loop, we end up at the start of the loop
     ;; again. So block just provides a place to jump to outside the
     ;; loop.
+    (local.set $outloc (i32.const 16))
     (local.set $iter (i32.const 1))
     (block
       (loop
@@ -73,12 +60,12 @@
       i32.eqz
       (if
         (then
-          ;; put number at outloc and incremenet by 4
+          ;; put number at outloc and increment by 1, limited to 1 byte
           local.get $outloc
           local.get $iter
-          i32.store
+          i32.store8
 
-          (local.set $outloc (i32.add (local.get $outloc) (i32.const 4)))
+          (local.set $outloc (i32.add (local.get $outloc) (i32.const 1)))
         )
       )
 
@@ -89,9 +76,9 @@
         (then
           ;; put fizz address at output location and increment out location by 4 bytes
           local.get $outloc
-          local.get $fizzloc
-          call $addflagaddr
-          i32.store
+          i32.const 0
+          i32.const 4
+          memory.copy
 
           (local.set $outloc (i32.add (local.get $outloc) (i32.const 4)))
         )
@@ -103,21 +90,15 @@
         (then
           ;; put buzz address at output location and increment out location by 4 bytes
           local.get $outloc
-          local.get $buzzloc
-          call $addflagaddr
-          i32.store
+          i32.const 4
+          i32.const 4
+          memory.copy
 
           (local.set $outloc (i32.add (local.get $outloc) (i32.const 4)))
         )
       )
 
       (call $markaddr (local.get $outloc))
-
-      ;; store flag marking the end of the iteration
-      local.get $outloc
-      (i32.shl (i32.const 1) (i32.const 30))
-      i32.store
-      (local.set $outloc (i32.add (local.get $outloc) (i32.const 4)))
 
       ;; increment iterator
       (local.set $iter (i32.add (local.get $iter) (i32.const 1)))
