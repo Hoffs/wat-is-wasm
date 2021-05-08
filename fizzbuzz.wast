@@ -47,7 +47,6 @@
     (local.set $iter (i32.const 1))
     (block
       (loop
-      ;;(local.set $iter (i32.add (local.get $iter) (i32.const 0)))
       ;; break if iter > range
       (br_if 1 (i32.gt_u (local.get $iter) (local.get $range)))
 

@@ -1,7 +1,7 @@
 (module
   ;; Import function to push address marks, push one at start
   ;; and push second at the end, then once 2 addresses are pushed
-  ;; slice between those (inclusive) is the "result" of the iteration.
+  ;; slice between those is the "result" of the iteration.
   (import "funcs" "markAddress" (func $markaddr (param i32)))
 
   ;; Create memory with a size of 1 page (= 64KiB)
@@ -17,7 +17,6 @@
 
 
   ;; Input is:
-  ;; - i32 for memory location of output
   ;; - i32 for number until which to run fizzbuzz
   (func $fizzbuzz
     (param $range i32) (result)
@@ -34,7 +33,6 @@
     (local.set $iter (i32.const 1))
     (block
       (loop
-      ;;(local.set $iter (i32.add (local.get $iter) (i32.const 0)))
       ;; break if iter > range
       (br_if 1 (i32.gt_u (local.get $iter) (local.get $range)))
 
@@ -74,7 +72,7 @@
       (i32.and (i32.const 1) (local.get $temp))
       (if
         (then
-          ;; put fizz address at output location and increment out location by 4 bytes
+          ;; copy memory range of "fizz" from 0, length 4 to $outloc
           local.get $outloc
           i32.const 0
           i32.const 4
@@ -88,7 +86,7 @@
       (i32.shr_u (local.get $temp) (i32.const 1))
       (if
         (then
-          ;; put buzz address at output location and increment out location by 4 bytes
+          ;; copy memory range of "buzz" from 4, length 4 to $outloc
           local.get $outloc
           i32.const 4
           i32.const 4
