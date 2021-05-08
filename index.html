@@ -82,7 +82,7 @@ body > * {
   <script>
     async function run() {
       const importObject = undefined;
-      const { instance } = await WebAssembly.instantiateStreaming(fetch('add.wasm'), importObject)
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('examples/add.wasm'), importObject)
       const { add, add_folded } = instance.exports;
 
       const input = document.getElementById("add__input").textContent.split("+").map(x => new Number(x.trim()))
@@ -94,7 +94,7 @@ body > * {
 
     async function run2() {
       const importObject = undefined;
-      const { instance } = await WebAssembly.instantiateStreaming(fetch('contrived.wasm'), importObject)
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('examples/contrived.wasm'), importObject)
       const { add2, add3 } = instance.exports;
 
       const input = document.getElementById("add23__input").textContent.split("+").map(x => new Number(x.trim()))
@@ -106,7 +106,7 @@ body > * {
 
     async function run3() {
       const importObject = { funcs: { log: () => console.log("This is a imported function") }};
-      const { instance } = await WebAssembly.instantiateStreaming(fetch('funcimport.wasm'), importObject)
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('examples/funcimport.wasm'), importObject)
       const { doLog } = instance.exports;
 
       doLog();
@@ -115,7 +115,7 @@ body > * {
 
     async function run4() {
       const importObject = undefined;
-      const { instance } = await WebAssembly.instantiateStreaming(fetch('memory.wasm'), importObject)
+      const { instance } = await WebAssembly.instantiateStreaming(fetch('examples/memory.wasm'), importObject)
       const { add_memory } = instance.exports;
       const mem = new Int32Array(instance.exports.memory.buffer);
       const input = new Number(document.getElementById("addmem__input").textContent);
