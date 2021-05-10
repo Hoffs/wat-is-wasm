@@ -21,7 +21,6 @@
     i32.or
   )
 
-  ;; todo, import function that prints word
   ;; Input is:
   ;; - i32 for memory location of fizz
   ;; - i32 for memory location of buzz
